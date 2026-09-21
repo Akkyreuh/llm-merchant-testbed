@@ -11,9 +11,20 @@ import json
 import time
 from dataclasses import dataclass, field
 
-from openai import OpenAI
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    InternalServerError,
+    OpenAI,
+    RateLimitError,
+)
 
 from pnj_bench.config import Config
+
+# Erreurs considérées comme transitoires (réseau, timeout, 429, 5xx) : seules celles-ci
+# sont retentées. Une erreur d'authentification ou de requête invalide (400) est
+# définitive et remonte immédiatement — la retenter n'y changerait rien.
+RETRYABLE_EXCEPTIONS = (APIConnectionError, APITimeoutError, RateLimitError, InternalServerError)
 
 
 @dataclass
@@ -32,6 +43,7 @@ class LLMResult:
     cost_usd: float = 0.0
     latency_ms: float = 0.0
     ttft_ms: float | None = None  # non mesuré tant que le streaming n'est pas activé
+    retries: int = 0  # nombre de tentatives ratées avant le succès (0 = réussi du premier coup)
 
 
 _client_cache: dict[str, OpenAI] = {}
@@ -39,10 +51,18 @@ _client_cache: dict[str, OpenAI] = {}
 
 def _get_client(config: Config) -> OpenAI:
     """Un seul client par base_url/clé, réutilisé entre appels (évite de rouvrir une
-    connexion à chaque tour)."""
+    connexion à chaque tour). max_retries=0 : le SDK ne retente jamais tout seul en
+    silence (ce qui, combiné à son timeout par défaut de 600s, peut ressembler à un
+    blocage) — call_llm() gère les retries explicitement, avec un délai visible et
+    journalisable à chaque tentative."""
     cache_key = config.api.base_url
     if cache_key not in _client_cache:
-        _client_cache[cache_key] = OpenAI(base_url=config.api.base_url, api_key=config.api_key())
+        _client_cache[cache_key] = OpenAI(
+            base_url=config.api.base_url,
+            api_key=config.api_key(),
+            timeout=60.0,
+            max_retries=0,
+        )
     return _client_cache[cache_key]
 
 
@@ -54,14 +74,29 @@ def call_llm(
 ) -> LLMResult:
     client = _get_client(config)
 
-    start = time.perf_counter()
-    response = client.chat.completions.create(
-        model=model_id,
-        messages=messages,
-        temperature=config.temperature,
-        tools=tools,
-    )
-    latency_ms = (time.perf_counter() - start) * 1000
+    attempt = 0
+    while True:
+        start = time.perf_counter()
+        try:
+            response = client.chat.completions.create(
+                model=model_id,
+                messages=messages,
+                temperature=config.temperature,
+                tools=tools,
+            )
+            latency_ms = (time.perf_counter() - start) * 1000
+            break
+        except RETRYABLE_EXCEPTIONS as exc:
+            if attempt >= config.network.max_retries:
+                raise
+            delay = config.network.base_delay_s * (2 ** attempt)
+            print(
+                f"[retry] {type(exc).__name__} sur {model_id} "
+                f"(tentative {attempt + 1}/{config.network.max_retries}), "
+                f"nouvel essai dans {delay:.0f}s..."
+            )
+            time.sleep(delay)
+            attempt += 1
 
     choice = response.choices[0].message
     tool_calls = [
@@ -87,4 +122,5 @@ def call_llm(
         cost_usd=cost_usd,
         latency_ms=latency_ms,
         ttft_ms=None,
+        retries=attempt,
     )

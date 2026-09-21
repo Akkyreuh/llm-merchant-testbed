@@ -29,7 +29,11 @@ context:
   max_retries: 2      # nombre de reformulations autorisées après une action invalide (Version B)
 
 protocol:
-  n_repeats: 5        # nombre de répétitions par scénario (non utilisé à l'étape 1)
+  n_repeats: 5        # nombre de répétitions par scénario
+
+network:
+  max_retries: 3      # nouvelles tentatives après une erreur réseau/serveur retryable (429, 5xx, timeout, connexion)
+  base_delay_s: 2      # délai avant la 1ère retentative, doublé à chaque tentative (2s, 4s, 8s...)
 
 game:
   player_gold_start: 50

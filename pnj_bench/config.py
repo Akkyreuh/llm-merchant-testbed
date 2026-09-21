@@ -35,6 +35,11 @@ class ProtocolConfig(BaseModel):
     n_repeats: int
 
 
+class NetworkConfig(BaseModel):
+    max_retries: int     # nombre de nouvelles tentatives après un échec réseau (0 = aucun retry)
+    base_delay_s: float  # délai avant la 1ère retentative ; doublé à chaque tentative suivante
+
+
 class GameConfig(BaseModel):
     player_gold_start: int
 
@@ -46,6 +51,7 @@ class Config(BaseModel):
     temperature: float
     context: ContextConfig
     protocol: ProtocolConfig
+    network: NetworkConfig
     game: GameConfig
 
     def resolve_model_id(self, model_key: str) -> str:

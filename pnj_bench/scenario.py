@@ -11,6 +11,7 @@ et jamais interchangeables (voir README) :
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,7 +22,7 @@ from pnj_bench.agent_structured import StructuredAgent
 from pnj_bench.checks import SUCCESS_CHECKS, ScenarioContext
 from pnj_bench.config import Config
 from pnj_bench.game_state import GameState
-from pnj_bench.logger import log_call
+from pnj_bench.logger import log_call, log_scenario_run
 
 SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 
@@ -71,6 +72,7 @@ class TurnLog:
 
 @dataclass
 class ScenarioRunResult:
+    run_id: str
     scenario_id: str
     version: str  # "A" ou "B"
     model_key: str
@@ -81,6 +83,7 @@ class ScenarioRunResult:
 
 
 def run_scenario_version_a(config: Config, scenario: Scenario, model_key: str, repeat: int = 0) -> ScenarioRunResult:
+    run_id = uuid.uuid4().hex[:12]
     model_id = config.resolve_model_id(model_key)
     agent = NaiveAgent(config=config, model_id=model_id, player_gold_start=config.game.player_gold_start)
 
@@ -89,28 +92,38 @@ def run_scenario_version_a(config: Config, scenario: Scenario, model_key: str, r
         result = agent.play_turn(player_message)
         turn_logs.append(TurnLog(turn=i, player_message=player_message, reply_text=result.reply_text))
         log_call(
-            scenario_id=scenario.id, version="A", model_key=model_key, model_id=model_id,
+            run_id=run_id, scenario_id=scenario.id, version="A", model_key=model_key, model_id=model_id,
             temperature=config.temperature, turn=i, repeat=repeat,
             tokens_in=result.llm_result.tokens_in, tokens_out=result.llm_result.tokens_out,
             cost_usd=result.llm_result.cost_usd, latency_ms=result.llm_result.latency_ms,
-            ttft_ms=result.llm_result.ttft_ms,
+            ttft_ms=result.llm_result.ttft_ms, retries=result.llm_result.retries,
         )
 
     # Version A n'a pas d'état : le code ne peut jamais trancher, quel que soit success_check.
+    log_scenario_run(
+        run_id=run_id, scenario_id=scenario.id, category=scenario.category, subcategory=scenario.subcategory,
+        version="A", model_key=model_key, model_id=model_id, repeat=repeat,
+        code_verified_success=None, n_turns=len(turn_logs), n_actions_executed=0, n_validation_rejected=0,
+    )
     return ScenarioRunResult(
-        scenario_id=scenario.id, version="A", model_key=model_key, model_id=model_id,
+        run_id=run_id, scenario_id=scenario.id, version="A", model_key=model_key, model_id=model_id,
         repeat=repeat, turn_logs=turn_logs, success=None,
     )
 
 
 def run_scenario_version_b(config: Config, scenario: Scenario, model_key: str, repeat: int = 0) -> ScenarioRunResult:
+    run_id = uuid.uuid4().hex[:12]
     model_id = config.resolve_model_id(model_key)
     state = GameState.new_game(config.game.player_gold_start)
     agent = StructuredAgent(config=config, model_id=model_id, state=state)
 
     turn_logs: list[TurnLog] = []
+    n_actions_executed = 0
+    n_validation_rejected = 0
     for i, player_message in enumerate(scenario.turns, start=1):
         result = agent.play_turn(player_message)
+        if result.action_executed is not None:
+            n_actions_executed += 1
         turn_logs.append(
             TurnLog(turn=i, player_message=player_message, reply_text=result.reply_text,
                      action_executed=result.action_executed)
@@ -123,12 +136,14 @@ def run_scenario_version_b(config: Config, scenario: Scenario, model_key: str, r
             if attempt_idx < len(result.validation_attempts):
                 va = result.validation_attempts[attempt_idx]
                 validation = {"action_type": va.action_type, "ok": va.ok, "reason": va.reason}
+                if not va.ok:
+                    n_validation_rejected += 1
             log_call(
-                scenario_id=scenario.id, version="B", model_key=model_key, model_id=model_id,
+                run_id=run_id, scenario_id=scenario.id, version="B", model_key=model_key, model_id=model_id,
                 temperature=config.temperature, turn=i, repeat=repeat,
                 tokens_in=llm_result.tokens_in, tokens_out=llm_result.tokens_out,
                 cost_usd=llm_result.cost_usd, latency_ms=llm_result.latency_ms,
-                ttft_ms=llm_result.ttft_ms, validation_result=validation,
+                ttft_ms=llm_result.ttft_ms, retries=llm_result.retries, validation_result=validation,
             )
 
     success = None
@@ -137,7 +152,13 @@ def run_scenario_version_b(config: Config, scenario: Scenario, model_key: str, r
         ctx = ScenarioContext(final_state=agent.state, turn_logs=turn_logs, params=scenario.success_params)
         success = check_fn(ctx)
 
+    log_scenario_run(
+        run_id=run_id, scenario_id=scenario.id, category=scenario.category, subcategory=scenario.subcategory,
+        version="B", model_key=model_key, model_id=model_id, repeat=repeat,
+        code_verified_success=success, n_turns=len(turn_logs),
+        n_actions_executed=n_actions_executed, n_validation_rejected=n_validation_rejected,
+    )
     return ScenarioRunResult(
-        scenario_id=scenario.id, version="B", model_key=model_key, model_id=model_id,
+        run_id=run_id, scenario_id=scenario.id, version="B", model_key=model_key, model_id=model_id,
         repeat=repeat, turn_logs=turn_logs, success=success,
     )
