@@ -6,3 +6,4 @@ venv/
 .env
 results/raw/*.jsonl
 !results/raw/.gitkeep
+results/raw_smoketest_archive/
