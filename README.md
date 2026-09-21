@@ -4,12 +4,12 @@ Banc de test pour un mémoire de master en IA sur l'intégration de LLM dans les
 jeux vidéo. Un même PNJ marchand est implémenté selon deux architectures et soumis à
 une batterie de scénarios identique, pour produire des résultats chiffrés comparables.
 
-**État actuel : étape 3 du protocole en 4 étapes.** Squelette du projet, état de jeu,
-validateur, exécuteur, client LLM (avec retries réseau), la batterie complète de 30
-scénarios, le juge (modèle séparé, grille explicite, JSON structuré) et le script
-d'analyse (`analyze.py`). Le protocole est figé au tag git `v1-protocole` avant toute
-collecte de données réelle. L'interface de démonstration (étape 4) reste à faire, sur
-demande.
+**État actuel : les 4 étapes du protocole sont faites.** Squelette du projet, état de
+jeu, validateur, exécuteur, client LLM (avec retries réseau), la batterie complète de
+30 scénarios, le juge (modèle séparé, grille explicite, JSON structuré), le script
+d'analyse (`analyze.py`), une collecte réelle N=3 complète (360 exécutions, résultats
+dans `results/analysis/`), et une démo Streamlit (`demo_app.py`). Le protocole est
+figé au tag git `v1-protocole`.
 
 ## Architecture
 
@@ -340,9 +340,26 @@ dans `results/analysis/summary.md`, données brutes dans `results/raw/` et
 - **Accord juge/code (Version B, scénarios de contrôle)** : 96,8% (économique) /
   87,3% (performant) — diagnostic de fiabilité du juge, pas une métrique du mémoire.
 
+## Démo (étape 4)
+
+```bash
+streamlit run demo_app.py
+```
+
+Ouvre une page locale (http://localhost:8501) pour discuter avec Joran en Version A,
+Version B, ou les deux côte à côte. Un panneau affiche en direct l'état du jeu de la
+Version B (or, relation, stock) et la liste des actions proposées avec leur
+validation (✅ acceptée / ❌ rejetée avec le motif), plus récent en premier. Chaque
+message envoyé déclenche un vrai appel API — le coût cumulé de la session est affiché
+dans la barre latérale.
+
+Choix de conception : comparaison A vs B côte à côte plutôt que Version B seule
+(demandée initialement dans le plan) — plus utile pour montrer concrètement l'écart
+mesuré par la batterie que pour discuter avec une seule version isolément.
+
 ## Prochaines étapes
 
 1. ~~Squelette, état de jeu, validateur, un scénario de bout en bout~~.
 2. ~~Batterie complète (30 scénarios : contrôle, cohérence, usage normal)~~.
-3. ~~Juge (modèle séparé, grille explicite, sortie JSON) + script d'analyse~~ (cette étape).
-4. Interface de démonstration minimale (sur demande).
+3. ~~Juge (modèle séparé, grille explicite, sortie JSON) + script d'analyse~~.
+4. ~~Interface de démonstration minimale~~ (cette étape).
