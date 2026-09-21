@@ -1,0 +1,35 @@
+# Configuration du banc de test. Voir README.md pour le détail de chaque section.
+
+api:
+  base_url: https://openrouter.ai/api/v1
+  api_key_env: OPENROUTER_API_KEY   # nom de la variable d'environnement contenant la clé
+
+models:
+  economique: openai/gpt-4o-mini
+  performant: openai/gpt-4o
+  juge: anthropic/claude-3.5-sonnet
+
+# Prix en USD par million de tokens. Snapshot OpenRouter au 2026-09-21 : à revérifier
+# avant de publier des résultats définitifs, les prix des fournisseurs évoluent.
+pricing:
+  openai/gpt-4o-mini:
+    input: 0.15
+    output: 0.60
+  openai/gpt-4o:
+    input: 2.50
+    output: 10.00
+  anthropic/claude-3.5-sonnet:
+    input: 3.00
+    output: 15.00
+
+temperature: 0.7
+
+context:
+  k_window: 10       # nombre d'échanges (paire user/assistant) conservés dans la fenêtre glissante
+  max_retries: 2      # nombre de reformulations autorisées après une action invalide (Version B)
+
+protocol:
+  n_repeats: 5        # nombre de répétitions par scénario (non utilisé à l'étape 1)
+
+game:
+  player_gold_start: 50

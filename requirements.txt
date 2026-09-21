@@ -1,0 +1,6 @@
+openai>=1.40
+pydantic>=2.6
+pandas>=2.2
+matplotlib>=3.8
+PyYAML>=6.0
+python-dotenv>=1.0
