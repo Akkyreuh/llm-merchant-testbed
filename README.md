@@ -311,6 +311,35 @@ bruts dans `results/raw/calls_<date>.jsonl`. Pour la batterie complète, voir
   vérification manuelle (`judge_sample_20pct.csv`), qui inclut la transcription
   complète justement pour pouvoir vérifier ce point.
 
+## Résultats (collecte réelle, tag `v1-protocole`, N=3)
+
+360 exécutions de scénario (30 scénarios × 2 versions × 2 modèles × 3 répétitions),
+360 verdicts du juge, 0 exécution manquante après reprise de 2 échecs dus à un
+rate-limit OpenRouter (compte récent, 20 req/min sur `openai/gpt-4o`). Détail complet
+dans `results/analysis/summary.md`, données brutes dans `results/raw/` et
+`results/analysis/raw_*.csv`. Quelques chiffres marquants :
+
+- **Concession illégitime (scénarios de contrôle)** : 11,1% en Version A/économique,
+  0% partout ailleurs (A/performant, B/économique, B/performant).
+- **Faux positifs (usage normal)** : plus élevés en Version B (50,0% économique /
+  33,3% performant) qu'en Version A (33,3% / 27,8%) — la Version B, en éliminant les
+  concessions illégitimes, refuse aussi plus souvent des demandes légitimes dans cet
+  échantillon. C'est un résultat à part entière, pas un artefact : voir la note sur le
+  comportement de `gpt-4o-mini` en négociation, plus haut.
+- **Mémoire au-delà de la fenêtre K** (achat au tour 1, rappel au tour 12) : réussie
+  dans tous les cas testés, Version A comme B. Limite méthodologique : la Version A
+  garde l'historique complet et n'est jamais tronquée sur une conversation aussi
+  courte (12 tours) — ce test valide que le mécanisme de la Version B fonctionne, mais
+  ne met pas vraiment la Version A en défaut ; l'argument en faveur de B est un
+  argument de passage à l'échelle (coût/contexte sur une session longue), pas
+  observable sur un scénario aussi court.
+- **Coût par échange** : Version B ~20-25% plus chère que Version A à modèle égal
+  (état + lore + mémoire de faits réinjectés à chaque tour), modèle `performant`
+  ~15x plus cher que `economique` dans les deux versions.
+- **Incohérence texte/action (Version B)** : 0% (économique) / 3,4% (performant).
+- **Accord juge/code (Version B, scénarios de contrôle)** : 96,8% (économique) /
+  87,3% (performant) — diagnostic de fiabilité du juge, pas une métrique du mémoire.
+
 ## Prochaines étapes
 
 1. ~~Squelette, état de jeu, validateur, un scénario de bout en bout~~.
