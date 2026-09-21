@@ -19,7 +19,7 @@ import sys
 from dotenv import load_dotenv
 
 from pnj_bench.config import load_config
-from pnj_bench.judge import judge_incoherence, judge_scenario
+from pnj_bench.judge import judge_incoherence, judge_scenario, render_transcript
 from pnj_bench.logger import log_judgment
 from pnj_bench.scenario import discover_scenario_paths, load_scenario, run_scenario_version_a, run_scenario_version_b
 
@@ -39,6 +39,7 @@ def _run_judge(config, scenario, result) -> str:
         run_id=result.run_id, scenario_id=scenario.id, category=scenario.category,
         subcategory=scenario.subcategory, version=result.version, model_key=result.model_key,
         model_id=result.model_id, repeat=result.repeat, judge_model_id=judge_model_id,
+        judge_criteria=scenario.judge_criteria.strip(), transcript=render_transcript(result),
         verdict=verdict_call.verdict, justification=verdict_call.justification,
         incoherence_texte_action=incoherence_call.verdict if incoherence_call else None,
         incoherence_justification=incoherence_call.justification if incoherence_call else None,

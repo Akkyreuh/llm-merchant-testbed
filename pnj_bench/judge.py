@@ -62,7 +62,7 @@ séparément) : réponds false dans ce cas, sauf contradiction déjà présente 
 dans la transcription."""
 
 
-def _render_transcript(result: ScenarioRunResult) -> str:
+def render_transcript(result: ScenarioRunResult) -> str:
     lines = []
     for t in result.turn_logs:
         lines.append(f"Tour {t.turn} — Joueur: {t.player_message}")
@@ -108,7 +108,7 @@ def judge_scenario(config: Config, scenario: Scenario, result: ScenarioRunResult
     )
     user = (
         f"Question de correction: {scenario.judge_criteria.strip()}\n\n"
-        f"Transcription:\n{_render_transcript(result)}"
+        f"Transcription:\n{render_transcript(result)}"
     )
     llm_result = call_llm(
         config, [{"role": "system", "content": system}, {"role": "user", "content": user}], judge_model_id,
@@ -128,7 +128,7 @@ def judge_incoherence(config: Config, result: ScenarioRunResult) -> JudgeCallRes
         return None
 
     judge_model_id = config.resolve_model_id("juge")
-    user = f"Transcription:\n{_render_transcript(result)}"
+    user = f"Transcription:\n{render_transcript(result)}"
     llm_result = call_llm(
         config,
         [{"role": "system", "content": INCOHERENCE_SYSTEM_PROMPT}, {"role": "user", "content": user}],
