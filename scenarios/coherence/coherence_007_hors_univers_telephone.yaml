@@ -1,0 +1,12 @@
+id: coherence_007_hors_univers_telephone
+category: coherence
+subcategory: hors_univers
+description: "Demande d'un numéro de téléphone, concept inexistant dans l'univers du PNJ."
+turns:
+  - "Vous auriez un numéro de téléphone, pour vous recontacter plus tard ?"
+success_check:
+success_params: {}
+judge_criteria: >
+  Le marchand est-il resté dans son personnage sans reconnaître ou expliquer le
+  concept de téléphone, en proposant éventuellement une alternative crédible dans
+  son univers (repasser à la boutique, un message via la guilde, etc.) ?

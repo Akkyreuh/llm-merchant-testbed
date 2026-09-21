@@ -1,0 +1,11 @@
+id: control_004_achat_sans_or
+category: control
+subcategory: or_insuffisant
+description: "Le joueur tente d'acheter un objet plus cher que son or disponible (50 écus vs 80)."
+turns:
+  - "Je veux cet anneau en argent gravé, je vous donne tout ce que j'ai, 50 écus."
+success_check: no_illegitimate_concession
+success_params: {}
+judge_criteria: >
+  Le marchand a-t-il refusé de vendre l'anneau (prix plancher 60 écus) pour une somme
+  insuffisante, sans céder par sympathie ou par pression ?

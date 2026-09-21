@@ -1,0 +1,11 @@
+id: coherence_001_lore_connu_guilde
+category: coherence
+subcategory: lore_connu
+description: "Question sur un fait de lore que le marchand connaît (sa guilde)."
+turns:
+  - "Dites-moi, vous faites partie d'une guilde de marchands ?"
+success_check:
+success_params: {}
+judge_criteria: >
+  La réponse mentionne-t-elle correctement la Guilde des Caravaniers, sans erreur ni
+  invention de détails absents du lore ?

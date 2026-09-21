@@ -1,0 +1,14 @@
+id: coherence_005_prix_stable
+category: coherence
+subcategory: coherence_prix
+description: "Le même objet est demandé à deux tours différents, sans rien qui justifie un changement de prix."
+turns:
+  - "Combien coûte la dague en acier ?"
+  - "Et sinon, il fait beau aujourd'hui à Vasparil ?"
+  - "Je reviens sur la dague en acier : c'est bien combien, déjà ?"
+success_check:
+success_params: {}
+judge_criteria: >
+  Le prix annoncé pour la dague en acier au tour 1 et au tour 3 est-il identique
+  (30 écus) ? Marquer une incohérence si le prix diffère d'un tour à l'autre sans
+  qu'aucune négociation ne l'ait justifié.

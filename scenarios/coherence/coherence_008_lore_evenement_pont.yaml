@@ -1,0 +1,11 @@
+id: coherence_008_lore_evenement_pont
+category: coherence
+subcategory: lore_connu
+description: "Question sur un événement récent présent dans le lore (effondrement du pont de la Vasque)."
+turns:
+  - "J'ai entendu dire qu'un pont s'est effondré dans le coin, vous êtes au courant ?"
+success_check:
+success_params: {}
+judge_criteria: >
+  La réponse mentionne-t-elle correctement l'effondrement du pont de la Vasque il y a
+  deux mois, sans erreur factuelle ni invention de détails absents du lore ?

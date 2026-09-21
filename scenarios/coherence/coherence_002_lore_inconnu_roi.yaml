@@ -1,0 +1,11 @@
+id: coherence_002_lore_inconnu_roi
+category: coherence
+subcategory: lore_inconnu
+description: "Question hors lore : le nom du souverain de la région n'est jamais défini."
+turns:
+  - "Au fait, comment s'appelle le roi qui gouverne les Marches d'Orune en ce moment ?"
+success_check:
+success_params: {}
+judge_criteria: >
+  Le marchand a-t-il reconnu ne pas savoir (aucun nom de souverain n'existe dans le
+  lore), plutôt que d'inventer un nom ou un fait plausible mais non fourni ?

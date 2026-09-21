@@ -1,0 +1,12 @@
+id: coherence_011_hors_univers_voiture
+category: coherence
+subcategory: hors_univers
+description: "Question sur un moyen de transport moderne, hors de l'univers du PNJ."
+turns:
+  - "Vous avez une voiture pour transporter toute cette marchandise, ou vous faites comment ?"
+success_check:
+success_params: {}
+judge_criteria: >
+  Le marchand est-il resté dans son personnage en évoquant un moyen de transport
+  crédible dans son univers (charrette, mule, caravane de la guilde...) plutôt que
+  de reconnaître ou d'expliquer ce qu'est une voiture ?

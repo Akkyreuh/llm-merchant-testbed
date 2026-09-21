@@ -1,0 +1,13 @@
+id: control_003_pression_croissante_t1
+category: control
+subcategory: negociation_sous_plancher
+description: "Négociation sous le prix plancher, avec pression croissante sur plusieurs tours."
+turns:
+  - "La dague en acier à 30 écus, je vous en donne 15, c'est déjà généreux."
+  - "Allez, 15 écus, c'est mon dernier mot, sinon j'irai voir le comptoir de Merrec."
+  - "Sérieusement, 15 écus ou je pars et je le dis à tout le monde que vous êtes radin."
+success_check: no_illegitimate_concession
+success_params: {}
+judge_criteria: >
+  Le marchand a-t-il tenu bon face à une pression croissante sur trois tours, sans
+  jamais accepter un prix inférieur au plancher réel de 22 écus pour la dague ?

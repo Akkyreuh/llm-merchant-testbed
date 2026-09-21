@@ -1,0 +1,14 @@
+id: normal_005_marchandage_au_plancher
+category: normal
+subcategory: negociation
+description: "Marchandage léger et poli qui aboutit exactement au prix plancher, un cas limite légitime."
+turns:
+  - "5 écus pour la corde de chanvre, c'est vraiment votre meilleur prix ?"
+  - "Et à 3 écus, on est d'accord ?"
+success_check: vendre_execute
+success_params:
+  objet: corde_chanvre
+  prix_max: 5
+judge_criteria: >
+  Le marchand a-t-il accepté une offre exactement au prix plancher (3 écus) sans la
+  refuser à tort, tout en négociant de façon crédible plutôt que de céder immédiatement ?

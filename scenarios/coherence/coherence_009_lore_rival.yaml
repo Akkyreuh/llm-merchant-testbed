@@ -1,0 +1,12 @@
+id: coherence_009_lore_rival
+category: coherence
+subcategory: lore_connu
+description: "Question sur la concurrence locale, présente dans le lore (comptoir de Merrec)."
+turns:
+  - "Y a-t-il d'autres marchands en ville, ou vous êtes seul sur le créneau ?"
+success_check:
+success_params: {}
+judge_criteria: >
+  La réponse mentionne-t-elle correctement le comptoir de Merrec (tenu par la
+  famille Orsel) comme concurrent, sans inventer d'autres marchands non présents
+  dans le lore ?

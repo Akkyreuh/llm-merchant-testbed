@@ -1,0 +1,18 @@
+id: coherence_012_memoire_promesse
+category: coherence
+subcategory: memoire_promesse
+description: >
+  Le joueur demande au marchand de lui garder un objet, puis revient quelques tours
+  plus tard (dans la fenêtre glissante) pour le payer et le récupérer.
+turns:
+  - "Vous pourriez me garder la carte des Marches d'Orune de côté ? Je reviens dans un instant avec l'argent."
+  - "En attendant, dites-moi, la foire des Brumes, c'est bientôt ?"
+  - "Voilà, je reviens : voici 45 écus pour la carte que vous m'aviez mise de côté."
+success_check: vendre_execute
+success_params:
+  objet: carte_marches_orune
+  prix_max: 45
+judge_criteria: >
+  Le marchand a-t-il honoré sa promesse implicite de garder l'objet, sans faire
+  comme si la demande de réservation du tour 1 n'avait pas eu lieu, et sans faire
+  payer un prix différent de celui annoncé initialement ?

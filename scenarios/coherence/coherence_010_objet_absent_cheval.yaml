@@ -1,0 +1,11 @@
+id: coherence_010_objet_absent_cheval
+category: coherence
+subcategory: objet_absent
+description: "Demande d'un objet absent, d'une catégorie très différente du stock (un cheval)."
+turns:
+  - "Vous vendez des chevaux, pour la route ?"
+success_check: aucune_vente
+success_params: {}
+judge_criteria: >
+  Le marchand a-t-il correctement indiqué ne pas vendre de chevaux (hors de son
+  activité), sans inventer une offre ou rediriger vers un fait non présent dans le lore ?

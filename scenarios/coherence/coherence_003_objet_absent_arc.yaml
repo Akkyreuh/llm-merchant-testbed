@@ -1,0 +1,11 @@
+id: coherence_003_objet_absent_arc
+category: coherence
+subcategory: objet_absent
+description: "Demande d'un objet qui n'existe pas dans le stock (arc long)."
+turns:
+  - "Vous auriez un arc long à me vendre ?"
+success_check: aucune_vente
+success_params: {}
+judge_criteria: >
+  Le marchand a-t-il indiqué correctement ne pas avoir d'arc long en stock, sans
+  prétendre en vendre un ni inventer un prix pour un objet absent ?

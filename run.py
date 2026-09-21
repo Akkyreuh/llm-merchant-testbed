@@ -1,7 +1,10 @@
 """CLI étape 1 : exécute un scénario sur la Version A et/ou la Version B.
 
 Exemple:
-    python run.py --scenario scenarios/sample_001.yaml --version both --model economique
+    python run.py --scenario scenarios/normal/normal_001_achat_simple.yaml --version both --model economique
+
+Pour la batterie complète (30 scénarios, matrice version x modèle x répétitions),
+voir run_battery.py.
 """
 
 from __future__ import annotations

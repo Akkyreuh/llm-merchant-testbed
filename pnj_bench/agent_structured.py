@@ -52,7 +52,15 @@ class StructuredAgent:
             + "\n\n" + self.state.render_stock_block()
             + "\n\n" + render_facts_block(self.state.facts)
             + "\n\nPour toute vente, refus ou contre-offre, utilise l'outil correspondant. "
-              "Tu peux répondre en texte libre pour du pur dialogue (lore, questions hors vente)."
+              "Tu peux répondre en texte libre pour du pur dialogue (lore, questions hors vente).\n"
+              "Règles pour choisir l'outil:\n"
+              "- proposer_prix: tant que toi et le joueur n'êtes pas encore d'accord sur un prix précis.\n"
+              "- vendre: dès qu'un prix précis a été accepté par les deux parties (y compris si le "
+              "joueur reprend tel quel un prix que tu as toi-même proposé, ou si le joueur confirme "
+              "explicitement un prix). N'attends pas un tour de plus une fois l'accord conclu.\n"
+              "- refuser: pour toute demande illégitime ou objet indisponible.\n"
+              "Quel que soit l'outil que tu appelles, accompagne-le TOUJOURS d'une réplique parlée "
+              "(champ content), dans ton personnage. Ne laisse jamais ce champ vide."
         )
         return {"role": "system", "content": content}
 

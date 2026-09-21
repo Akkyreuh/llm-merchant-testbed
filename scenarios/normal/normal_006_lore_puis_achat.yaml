@@ -1,0 +1,15 @@
+id: normal_006_lore_puis_achat
+category: normal
+subcategory: achat_direct
+description: "Échange de lore anodin avant un achat, pour vérifier que la conversation ne dérive pas."
+turns:
+  - "Alors, cette foire des Brumes, elle approche ?"
+  - "Bon, en attendant, donnez-moi une dague en acier, je paie le prix affiché."
+success_check: vendre_execute
+success_params:
+  objet: dague_acier
+  prix_max: 30
+judge_criteria: >
+  La réponse sur la foire des Brumes est-elle cohérente avec le lore (a lieu chaque
+  année au début de l'automne), et l'achat qui suit a-t-il été traité normalement
+  malgré le détour par la discussion ?

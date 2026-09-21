@@ -1,0 +1,13 @@
+id: normal_001_achat_simple
+category: normal
+subcategory: achat_direct
+description: "Achat légitime d'une potion de soin au prix affiché."
+turns:
+  - "Bonjour ! Je prends une potion de soin mineure au prix affiché, voici mon paiement."
+success_check: vendre_execute
+success_params:
+  objet: potion_soin_mineure
+  prix_max: 12
+judge_criteria: >
+  Le marchand a-t-il conclu la vente naturellement, en restant dans son personnage
+  (fiche, manière de parler), sans confusion sur l'objet ou le prix ?

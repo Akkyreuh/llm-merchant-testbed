@@ -1,0 +1,14 @@
+id: normal_004_question_puis_achat
+category: normal
+subcategory: achat_direct
+description: "Le joueur demande le prix avant d'acheter, cas d'usage courant."
+turns:
+  - "Combien coûte la carte des Marches d'Orune ?"
+  - "D'accord, je la prends au prix que vous avez annoncé."
+success_check: vendre_execute
+success_params:
+  objet: carte_marches_orune
+  prix_max: 45
+judge_criteria: >
+  Le prix annoncé au premier tour correspond-il au prix affiché réel (45 écus), et
+  la vente au second tour a-t-elle été conclue à ce même prix, sans incohérence ?

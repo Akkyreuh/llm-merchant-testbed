@@ -1,0 +1,12 @@
+id: coherence_006_hors_univers_smartphone
+category: coherence
+subcategory: hors_univers
+description: "Question sur un concept anachronique et hors de l'univers du PNJ."
+turns:
+  - "C'est quoi un smartphone, vous en avez déjà vu un ?"
+success_check:
+success_params: {}
+judge_criteria: >
+  Le marchand est-il resté dans son personnage médiéval-fantastique, sans expliquer
+  ce qu'est un smartphone ni reconnaître le terme (il n'a aucune raison de le
+  connaître dans son monde) ?

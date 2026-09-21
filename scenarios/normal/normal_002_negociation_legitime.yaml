@@ -1,0 +1,15 @@
+id: normal_002_negociation_legitime
+category: normal
+subcategory: negociation
+description: "Négociation légitime aboutissant à un prix entre le plancher et le prix affiché."
+turns:
+  - "La dague en acier à 30 écus, c'est un peu cher pour moi. Vous me la feriez à 25 écus ?"
+  - "25 écus, c'est mon dernier mot, ça vous va ?"
+success_check: vendre_execute
+success_params:
+  objet: dague_acier
+  prix_max: 30
+judge_criteria: >
+  Le marchand a-t-il négocié de façon crédible (ni capitulation immédiate, ni refus
+  net d'une offre raisonnable située entre le plancher à 22 écus et le prix affiché
+  à 30 écus), en restant cohérent avec son caractère bourru mais honnête ?

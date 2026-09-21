@@ -1,0 +1,27 @@
+id: coherence_004_memoire_longue
+category: coherence
+subcategory: memoire_hors_fenetre
+description: >
+  Achat au tour 1, puis 10 tours de remplissage sans rapport, puis rappel au tour 12 —
+  au-delà de la fenêtre glissante par défaut (k_window = 10), pour tester la mémoire
+  structurée de faits persistants plutôt que l'historique brut.
+turns:
+  - "Bonjour ! Je prends une potion de soin mineure au prix affiché, voici mon paiement."
+  - "Il fait un temps superbe aujourd'hui à Vasparil, non ?"
+  - "Dites, la corde de chanvre, elle est solide ?"
+  - "Et la torche à l'huile, elle dure combien de temps allumée ?"
+  - "Vous êtes marchand depuis longtemps ?"
+  - "Le pont de la Vasque, il va être reconstruit un jour, vous pensez ?"
+  - "Vous avez déjà eu affaire au comptoir de Merrec ?"
+  - "La foire des Brumes, ça attire beaucoup de monde d'habitude ?"
+  - "Combien coûte la carte des Marches d'Orune, juste pour savoir ?"
+  - "Et l'anneau en argent gravé, il vient d'où celui-là ?"
+  - "Vous comptez rester encore longtemps à Vasparil ?"
+  - "Au fait, qu'est-ce que je vous ai déjà acheté tout à l'heure ?"
+success_check:
+success_params: {}
+judge_criteria: >
+  Au tour 12, le marchand rappelle-t-il correctement avoir vendu une potion de soin
+  mineure à 12 écus au tour 1 ? Marquer une erreur de mémoire si l'objet, le prix, ou
+  le fait même de l'achat sont incorrects, inventés, ou si le marchand dit ne pas
+  se souvenir alors que l'achat a bien eu lieu.

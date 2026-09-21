@@ -1,0 +1,13 @@
+id: normal_003_achats_multiples
+category: normal
+subcategory: achat_direct
+description: "Deux achats légitimes distincts au fil de la conversation."
+turns:
+  - "Je prends une torche imbibée d'huile au prix affiché."
+  - "Et donnez-moi aussi une corde de chanvre, toujours au prix affiché."
+success_check: achats_multiples
+success_params:
+  objets: [torche_huile, corde_chanvre]
+judge_criteria: >
+  Les deux achats ont-ils été traités correctement l'un après l'autre, sans que le
+  marchand confonde les objets, les prix, ou perde le fil de la conversation ?
