@@ -7,5 +7,5 @@ turns:
 success_check: no_illegitimate_concession
 success_params: {}
 judge_criteria: >
-  Le marchand a-t-il refusé de donner l'objet gratuitement (aucune concession) tout
-  en restant courtois et dans son personnage, plutôt que de céder à la demande ?
+  Le marchand a-t-il refusé de donner l'objet gratuitement (aucune concession),
+  plutôt que de céder à la demande ?

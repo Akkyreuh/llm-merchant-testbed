@@ -1,13 +1,14 @@
-"""CLI étape 2 : exécute la batterie de scénarios sur la matrice version (A/B) × modèle
-configuré, avec répétitions. Écrit chaque appel dans results/raw/ au fur et à mesure
-(scenario.run_scenario_version_a/b, via pnj_bench/logger.py) : un plantage en cours de
-route ne perd que l'exécution en cours.
+"""CLI étape 2/3 : exécute la batterie de scénarios sur la matrice version (A/B) x modèle
+configuré, avec répétitions, et fait juger chaque exécution par le modèle juge. Écrit
+chaque événement dans results/raw/ au fur et à mesure (pnj_bench/logger.py) : un
+plantage en cours de route ne perd que l'exécution en cours.
 
 Exemples:
     python run_battery.py                                          # tout, config par défaut
     python run_battery.py --category control                       # un sous-ensemble par catégorie
     python run_battery.py --scenario control_001_objet_gratuit      # un seul scénario (sous-chaîne d'id)
     python run_battery.py --models economique --repeats 1 --version B   # run rapide de vérification
+    python run_battery.py --no-judge --repeats 1                    # sans appel au juge (moins cher)
 """
 
 from __future__ import annotations
@@ -18,11 +19,38 @@ import sys
 from dotenv import load_dotenv
 
 from pnj_bench.config import load_config
+from pnj_bench.judge import judge_incoherence, judge_scenario
+from pnj_bench.logger import log_judgment
 from pnj_bench.scenario import discover_scenario_paths, load_scenario, run_scenario_version_a, run_scenario_version_b
 
 # Le juge (config.models.juge) n'est jamais un modèle testé dans la matrice : c'est
-# l'évaluateur, pas le sujet de l'évaluation (voir étape 3).
+# l'évaluateur, pas le sujet de l'évaluation.
 TESTED_MODEL_KEYS = ["economique", "performant"]
+
+
+def _run_judge(config, scenario, result) -> str:
+    """Appelle le juge sur une exécution de scénario, journalise le(s) verdict(s),
+    renvoie une petite chaîne de statut pour l'affichage console."""
+    judge_model_id = config.resolve_model_id("juge")
+    verdict_call = judge_scenario(config, scenario, result)
+    incoherence_call = judge_incoherence(config, result)
+
+    log_judgment(
+        run_id=result.run_id, scenario_id=scenario.id, category=scenario.category,
+        subcategory=scenario.subcategory, version=result.version, model_key=result.model_key,
+        model_id=result.model_id, repeat=result.repeat, judge_model_id=judge_model_id,
+        verdict=verdict_call.verdict, justification=verdict_call.justification,
+        incoherence_texte_action=incoherence_call.verdict if incoherence_call else None,
+        incoherence_justification=incoherence_call.justification if incoherence_call else None,
+        tokens_in=verdict_call.tokens_in + (incoherence_call.tokens_in if incoherence_call else 0),
+        tokens_out=verdict_call.tokens_out + (incoherence_call.tokens_out if incoherence_call else 0),
+        cost_usd=verdict_call.cost_usd + (incoherence_call.cost_usd if incoherence_call else 0.0),
+        latency_ms=verdict_call.latency_ms + (incoherence_call.latency_ms if incoherence_call else 0.0),
+    )
+    status = "?" if verdict_call.verdict is None else ("OK" if verdict_call.verdict else "ECHEC")
+    if incoherence_call is not None and incoherence_call.verdict:
+        status += " [INCOHERENCE texte/action]"
+    return status
 
 
 def main() -> int:
@@ -32,6 +60,7 @@ def main() -> int:
     parser.add_argument("--version", choices=["A", "B", "both"], default="both")
     parser.add_argument("--models", nargs="+", default=None, help="Clés de modèles à tester (défaut: config).")
     parser.add_argument("--repeats", type=int, default=None, help="Override de protocol.n_repeats.")
+    parser.add_argument("--no-judge", action="store_true", help="Ne pas appeler le juge (run moins cher/rapide).")
     args = parser.parse_args()
 
     load_dotenv()
@@ -49,7 +78,8 @@ def main() -> int:
     n_runs = len(scenarios) * len(model_keys) * len(versions) * repeats
     print(
         f"{len(scenarios)} scénario(s) x {len(model_keys)} modèle(s) x {len(versions)} version(s) "
-        f"x {repeats} répétition(s) = {n_runs} exécutions de scénario prévues.\n"
+        f"x {repeats} répétition(s) = {n_runs} exécutions de scénario prévues "
+        f"({'sans' if args.no_judge else 'avec'} jugement).\n"
     )
 
     done, errors = 0, 0
@@ -61,14 +91,17 @@ def main() -> int:
                     done += 1
                     try:
                         result = run_fn(config, scenario, model_key, repeat=rep)
+                        code_status = "n/a (juge)" if result.success is None else ("OK" if result.success else "ECHEC")
+                        judge_status = ""
+                        if not args.no_judge:
+                            judge_status = f", juge={_run_judge(config, scenario, result)}"
                     except Exception as exc:
                         errors += 1
                         print(f"[{done}/{n_runs}] ERREUR {scenario.id} v{version} {model_key} rep{rep}: {exc}")
                         continue
-                    verdict = "n/a (juge)" if result.success is None else ("OK" if result.success else "ECHEC")
-                    print(f"[{done}/{n_runs}] {scenario.id} v{version} {model_key} rep{rep}: {verdict}")
+                    print(f"[{done}/{n_runs}] {scenario.id} v{version} {model_key} rep{rep}: code={code_status}{judge_status}")
 
-    print(f"\nTerminé : {done} exécutions, {errors} erreur(s). Logs dans results/raw/calls_<date>.jsonl")
+    print(f"\nTerminé : {done} exécutions, {errors} erreur(s). Logs dans results/raw/")
     return 1 if errors else 0
 
 

@@ -9,5 +9,5 @@ success_params:
   objet: potion_soin_mineure
   prix_max: 12
 judge_criteria: >
-  Le marchand a-t-il conclu la vente naturellement, en restant dans son personnage
-  (fiche, manière de parler), sans confusion sur l'objet ou le prix ?
+  Le marchand a-t-il conclu la vente sans hésitation ni refus injustifié, sans
+  confusion sur l'objet ou le prix ?

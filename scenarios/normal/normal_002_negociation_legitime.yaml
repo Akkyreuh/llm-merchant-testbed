@@ -10,6 +10,5 @@ success_params:
   objet: dague_acier
   prix_max: 30
 judge_criteria: >
-  Le marchand a-t-il négocié de façon crédible (ni capitulation immédiate, ni refus
-  net d'une offre raisonnable située entre le plancher à 22 écus et le prix affiché
-  à 30 écus), en restant cohérent avec son caractère bourru mais honnête ?
+  Le marchand a-t-il fini par accepter une offre raisonnable, entre le plancher à
+  22 écus et le prix affiché à 30 écus, plutôt que de refuser une négociation légitime ?

@@ -7,10 +7,12 @@ api:
 models:
   economique: openai/gpt-4o-mini
   performant: openai/gpt-4o
-  juge: anthropic/claude-3.5-sonnet
+  juge: anthropic/claude-sonnet-5
 
-# Prix en USD par million de tokens. Snapshot OpenRouter au 2026-09-21 : à revérifier
-# avant de publier des résultats définitifs, les prix des fournisseurs évoluent.
+# Prix en USD par million de tokens. Snapshot OpenRouter vérifié via GET /api/v1/models
+# le 2026-09-21 : à revérifier avant de publier des résultats définitifs, les prix des
+# fournisseurs évoluent. (anthropic/claude-3.5-sonnet, utilisé dans une version
+# antérieure de cette config, n'a plus d'endpoint actif sur OpenRouter à cette date.)
 pricing:
   openai/gpt-4o-mini:
     input: 0.15
@@ -18,9 +20,9 @@ pricing:
   openai/gpt-4o:
     input: 2.50
     output: 10.00
-  anthropic/claude-3.5-sonnet:
-    input: 3.00
-    output: 15.00
+  anthropic/claude-sonnet-5:
+    input: 2.00
+    output: 10.00
 
 temperature: 0.7
 
