@@ -15,7 +15,7 @@ import sys
 from dotenv import load_dotenv
 
 from pnj_bench.config import load_config
-from pnj_bench.scenario import load_scenario, run_scenario_version_a, run_scenario_version_b
+from pnj_bench.scenario import load_scenario, run_scenario_version_a, run_scenario_version_b, run_scenario_version_b2
 
 
 def print_result(result) -> None:
@@ -34,7 +34,8 @@ def print_result(result) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lance un scénario sur le PNJ marchand.")
     parser.add_argument("--scenario", required=True, help="Chemin vers le fichier YAML du scénario.")
-    parser.add_argument("--version", choices=["A", "B", "both"], default="both")
+    parser.add_argument("--version", choices=["A", "B", "B2", "both"], default="both",
+                         help="'both' = A+B uniquement (rétrocompatible) ; B2 se sélectionne explicitement.")
     parser.add_argument("--model", default="economique", help="Clé de modèle (config.yaml: models) ou id direct.")
     args = parser.parse_args()
 
@@ -51,6 +52,10 @@ def main() -> int:
     if args.version in ("B", "both"):
         result_b = run_scenario_version_b(config, scenario, args.model)
         print_result(result_b)
+
+    if args.version == "B2":
+        result_b2 = run_scenario_version_b2(config, scenario, args.model)
+        print_result(result_b2)
 
     print("\nLogs bruts écrits dans results/raw/calls_<date>.jsonl")
     return 0

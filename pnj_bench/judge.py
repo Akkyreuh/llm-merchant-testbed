@@ -124,7 +124,7 @@ def judge_scenario(config: Config, scenario: Scenario, result: ScenarioRunResult
 
 def judge_incoherence(config: Config, result: ScenarioRunResult) -> JudgeCallResult | None:
     """None si non applicable (Version A, ou aucune action exécutée dans ce scénario)."""
-    if result.version != "B" or not any(t.action_executed is not None for t in result.turn_logs):
+    if result.version not in ("B", "B2") or not any(t.action_executed is not None for t in result.turn_logs):
         return None
 
     judge_model_id = config.resolve_model_id("juge")

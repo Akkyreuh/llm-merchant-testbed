@@ -1,9 +1,10 @@
 """Étape 4 : interface de démonstration minimale.
 
-Discuter avec le marchand en Version A, Version B, ou les deux côte à côte, avec un
-panneau qui affiche en direct l'état du jeu et les actions proposées/rejetées par le
-validateur (Version B). Chaque message envoyé déclenche un vrai appel API (coût réel,
-affiché en direct dans la barre latérale).
+Discuter avec le marchand en Version A, Version B, Version B2 (seule) ou en
+comparaison A vs B côte à côte, avec un panneau qui affiche en direct l'état du jeu
+et les actions proposées/rejetées par le validateur (Version B ou B2). Chaque
+message envoyé déclenche un vrai appel API (coût réel, affiché en direct dans la
+barre latérale). La Version B2 a son propre état de jeu, jamais partagé avec B.
 
 Lancer avec : streamlit run demo_app.py
 """
@@ -15,6 +16,7 @@ from dotenv import load_dotenv
 
 from pnj_bench.agent_naive import NaiveAgent
 from pnj_bench.agent_structured import StructuredAgent
+from pnj_bench.agent_structured_v2 import StructuredAgentV2
 from pnj_bench.config import load_config
 from pnj_bench.game_state import GameState
 
@@ -42,13 +44,22 @@ def new_structured_agent(config, model_key: str) -> StructuredAgent:
     return StructuredAgent(config=config, model_id=model_id, state=state)
 
 
+def new_structured_agent_v2(config, model_key: str) -> StructuredAgentV2:
+    model_id = config.resolve_model_id(model_key)
+    state = GameState.new_game(config.game.player_gold_start)  # état indépendant de B, jamais partagé
+    return StructuredAgentV2(config=config, model_id=model_id, state=state)
+
+
 def init_session(config, model_key: str) -> None:
     st.session_state.model_key = model_key
     st.session_state.agent_a = new_naive_agent(config, model_key)
     st.session_state.agent_b = new_structured_agent(config, model_key)
+    st.session_state.agent_b2 = new_structured_agent_v2(config, model_key)
     st.session_state.chat_a = []
     st.session_state.chat_b = []
-    st.session_state.validation_log = []  # plus récent en premier
+    st.session_state.chat_b2 = []
+    st.session_state.validation_log = []     # Version B, plus récent en premier
+    st.session_state.validation_log_b2 = []  # Version B2, plus récent en premier
     st.session_state.session_cost_usd = 0.0
 
 
@@ -59,7 +70,10 @@ model_key = st.sidebar.selectbox(
     "Modèle", DEMO_MODEL_KEYS, index=0,
     format_func=lambda k: f"{k} ({config.resolve_model_id(k)})",
 )
-mode = st.sidebar.radio("Affichage", ["Comparaison A vs B", "Version A seule", "Version B seule"])
+mode = st.sidebar.radio(
+    "Affichage",
+    ["Comparaison A vs B", "Version A seule", "Version B seule", "Version B2 seule"],
+)
 
 if "model_key" not in st.session_state or st.session_state.model_key != model_key:
     init_session(config, model_key)
@@ -82,13 +96,19 @@ st.caption(
 
 show_a = mode in ("Comparaison A vs B", "Version A seule")
 show_b = mode in ("Comparaison A vs B", "Version B seule")
+show_b2 = mode == "Version B2 seule"
 
 if mode == "Comparaison A vs B":
     col_a, col_b, col_state = st.columns([2, 2, 1.4])
+    col_b2 = None
 elif mode == "Version A seule":
-    col_a, col_b, col_state = st.container(), None, None
-else:
-    col_a, col_b, col_state = None, *st.columns([2, 1.4])
+    col_a, col_b, col_b2, col_state = st.container(), None, None, None
+elif mode == "Version B seule":
+    col_a, col_b2 = None, None
+    col_b, col_state = st.columns([2, 1.4])
+else:  # "Version B2 seule"
+    col_a, col_b = None, None
+    col_b2, col_state = st.columns([2, 1.4])
 
 
 def render_chat(col, title: str, history: list[tuple[str, str]]) -> None:
@@ -98,10 +118,10 @@ def render_chat(col, title: str, history: list[tuple[str, str]]) -> None:
             st.chat_message(role).write(text)
 
 
-def render_state_panel(col) -> None:
+def render_state_panel(col, agent, validation_log: list[dict], version_label: str) -> None:
     with col:
-        st.subheader("État du jeu (Version B)")
-        state = st.session_state.agent_b.state
+        st.subheader(f"État du jeu (Version {version_label})")
+        state = agent.state
         c1, c2 = st.columns(2)
         c1.metric("Or du joueur", f"{state.player_gold} écus")
         c2.metric("Relation", state.relationship_score)
@@ -124,9 +144,9 @@ def render_state_panel(col) -> None:
             )
 
         st.markdown("**Actions proposées et validation** (plus récent en premier)")
-        if not st.session_state.validation_log:
+        if not validation_log:
             st.caption("Aucune action proposée pour l'instant.")
-        for ev in st.session_state.validation_log:
+        for ev in validation_log:
             icon = "✅" if ev["ok"] else "❌"
             detail = f" — *{ev['reason']}*" if ev["reason"] else ""
             st.markdown(f"{icon} tour {ev['turn']} — `{ev['action']}` {ev['params']}{detail}")
@@ -136,8 +156,13 @@ if show_a:
     render_chat(col_a, "Version A (naïve)", st.session_state.chat_a)
 if show_b:
     render_chat(col_b, "Version B (architecture proposée)", st.session_state.chat_b)
+if show_b2:
+    render_chat(col_b2, "Version B2 (correctifs)", st.session_state.chat_b2)
 if col_state is not None:
-    render_state_panel(col_state)
+    if show_b2:
+        render_state_panel(col_state, st.session_state.agent_b2, st.session_state.validation_log_b2, "B2")
+    else:
+        render_state_panel(col_state, st.session_state.agent_b, st.session_state.validation_log, "B")
 
 prompt = st.chat_input("Message au marchand...")
 if prompt:
@@ -160,6 +185,21 @@ if prompt:
                 for va in result_b.validation_attempts:
                     st.session_state.validation_log.insert(0, {
                         "turn": st.session_state.agent_b.state.turn,
+                        "action": va.action_type, "params": va.action_params,
+                        "ok": va.ok, "reason": va.reason,
+                    })
+
+            if show_b2:
+                st.session_state.chat_b2.append(("user", prompt))
+                result_b2 = st.session_state.agent_b2.play_turn(prompt)
+                reply = result_b2.reply_text or "*(réplique vide)*"
+                if result_b2.action_executed:
+                    reply += f"\n\n*action exécutée : {result_b2.action_executed}*"
+                st.session_state.chat_b2.append(("assistant", reply))
+                st.session_state.session_cost_usd += sum(r.cost_usd for r in result_b2.llm_results)
+                for va in result_b2.validation_attempts:
+                    st.session_state.validation_log_b2.insert(0, {
+                        "turn": st.session_state.agent_b2.state.turn,
                         "action": va.action_type, "params": va.action_params,
                         "ok": va.ok, "reason": va.reason,
                     })

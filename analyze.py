@@ -27,12 +27,14 @@ RAW_DIR = Path(__file__).resolve().parent / "results" / "raw"
 OUT_DIR = Path(__file__).resolve().parent / "results" / "analysis"
 
 # Palette catégorielle validée (skill dataviz, ordre fixe — jamais recyclé) :
-# le bleu identifie toujours la Version A, l'orange toujours la Version B, dans
-# tous les graphiques de ce script.
+# le bleu identifie toujours la Version A, l'orange toujours la Version B, l'aqua
+# toujours la Version B2, dans tous les graphiques de ce script.
 COLOR_A = "#2a78d6"
 COLOR_B = "#eb6834"
+COLOR_B2 = "#1baf7a"
 COLOR_SEQ_DARK = "#256abf"   # rampe séquentielle (bleu) : moyenne
 COLOR_SEQ_LIGHT = "#6da7ec"  # rampe séquentielle (bleu) : médiane
+VERSION_COLORS = {"A": COLOR_A, "B": COLOR_B, "B2": COLOR_B2}
 INK_PRIMARY = "#0b0b0b"
 INK_SECONDARY = "#52514e"
 INK_MUTED = "#898781"
@@ -193,16 +195,25 @@ def _bar_labels(ax, bars, fmt: str) -> None:
                     textcoords="offset points", ha="center", va="bottom", fontsize=8, color=INK_PRIMARY)
 
 
+def _present_versions(df: pd.DataFrame) -> list[str]:
+    """Ordre catégoriel fixe (A, B, B2), restreint aux versions réellement présentes
+    dans les données — jamais recyclé ni réordonné selon ce qui est chargé."""
+    present = set(df["version"].unique())
+    return [v for v in ("A", "B", "B2") if v in present]
+
+
 def _grouped_bar_by_version(runs_or_ex: pd.DataFrame, group_col: str, value_fn, title: str,
                              ylabel: str, out_path: Path, fmt: str = "{:.0f}") -> None:
     groups = sorted(runs_or_ex[group_col].unique())
+    versions = _present_versions(runs_or_ex)
     fig, ax = plt.subplots(figsize=(7, 4.5), facecolor=SURFACE)
-    width = 0.35
+    width = 0.8 / len(versions)
     x = range(len(groups))
-    for i, (version, color) in enumerate([("A", COLOR_A), ("B", COLOR_B)]):
+    for i, version in enumerate(versions):
         values = [value_fn(runs_or_ex, g, version) for g in groups]
-        offset = (i - 0.5) * width
-        bars = ax.bar([xi + offset for xi in x], values, width=width, color=color, label=f"Version {version}", zorder=3)
+        offset = (i - (len(versions) - 1) / 2) * width
+        bars = ax.bar([xi + offset for xi in x], values, width=width, color=VERSION_COLORS[version],
+                       label=f"Version {version}", zorder=3)
         _bar_labels(ax, bars, fmt)
     ax.set_xticks(list(x))
     ax.set_xticklabels(groups)
@@ -223,13 +234,15 @@ def chart_success_by_category(runs: pd.DataFrame, out_path: Path) -> None:
         sub = runs[(runs["version"] == version) & (runs["category"] == cat)]["final_success"].dropna()
         return float("nan") if sub.empty else 100 * sub.astype(bool).mean()
 
+    versions = _present_versions(runs)
     fig, ax = plt.subplots(figsize=(7, 4.5), facecolor=SURFACE)
-    width = 0.35
+    width = 0.8 / len(versions)
     x = range(len(cats))
-    for i, (version, color) in enumerate([("A", COLOR_A), ("B", COLOR_B)]):
+    for i, version in enumerate(versions):
         values = [value_fn(runs, c, version) for c in cats]
-        offset = (i - 0.5) * width
-        bars = ax.bar([xi + offset for xi in x], values, width=width, color=color, label=f"Version {version}", zorder=3)
+        offset = (i - (len(versions) - 1) / 2) * width
+        bars = ax.bar([xi + offset for xi in x], values, width=width, color=VERSION_COLORS[version],
+                       label=f"Version {version}", zorder=3)
         _bar_labels(ax, bars, "{:.0f}%")
     ax.set_xticks(list(x))
     ax.set_xticklabels([labels[c] for c in cats])
@@ -287,21 +300,19 @@ def chart_latency(exchanges: pd.DataFrame, out_path: Path) -> None:
 
 
 def chart_incoherence(runs: pd.DataFrame, out_path: Path) -> None:
-    sub_b = runs[(runs["version"] == "B") & runs["incoherence_texte_action"].notna()]
-    models = sorted(sub_b["model_key"].unique())
-    values = [
-        100 * sub_b[sub_b["model_key"] == m]["incoherence_texte_action"].astype(bool).mean()
-        for m in models
-    ]
-    fig, ax = plt.subplots(figsize=(5.5, 4.5), facecolor=SURFACE)
-    bars = ax.bar(models, values, width=0.5, color=COLOR_B, zorder=3)
-    _bar_labels(ax, bars, "{:.0f}%")
-    ax.set_ylabel("Taux d'incohérence texte/action (%)")
-    ax.set_title("Incohérence texte/action, Version B uniquement\n(le PNJ dit autre chose que ce qu'il fait)")
-    _style_ax(ax)
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=150, facecolor=SURFACE)
-    plt.close(fig)
+    """B et B2 uniquement (A n'a pas d'action à comparer à son texte), chacune comme
+    série propre — jamais fusionnées, pour pouvoir juger si B2 a réduit ce taux."""
+    sub = runs[runs["version"].isin(("B", "B2")) & runs["incoherence_texte_action"].notna()]
+
+    def value_fn(_df, model_key, version):
+        s = sub[(sub["model_key"] == model_key) & (sub["version"] == version)]["incoherence_texte_action"]
+        return float("nan") if s.empty else 100 * s.astype(bool).mean()
+
+    _grouped_bar_by_version(
+        sub, "model_key", value_fn,
+        "Incohérence texte/action, Version B / B2\n(le PNJ dit autre chose que ce qu'il fait)",
+        "Taux d'incohérence texte/action (%)", out_path, "{:.0f}%",
+    )
 
 
 def write_summary_md(outcomes: pd.DataFrame, performance: pd.DataFrame, agreement: pd.DataFrame,

@@ -20,8 +20,13 @@ from dotenv import load_dotenv
 
 from pnj_bench.config import load_config
 from pnj_bench.judge import judge_incoherence, judge_scenario, render_transcript
-from pnj_bench.logger import log_judgment
-from pnj_bench.scenario import discover_scenario_paths, load_scenario, run_scenario_version_a, run_scenario_version_b
+from pnj_bench.logger import log_judgment, next_free_repeat
+from pnj_bench.scenario import (
+    discover_scenario_paths, load_scenario,
+    run_scenario_version_a, run_scenario_version_b, run_scenario_version_b2,
+)
+
+RUN_FNS = {"A": run_scenario_version_a, "B": run_scenario_version_b, "B2": run_scenario_version_b2}
 
 # Le juge (config.models.juge) n'est jamais un modèle testé dans la matrice : c'est
 # l'évaluateur, pas le sujet de l'évaluation.
@@ -58,9 +63,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Lance la batterie de scénarios sur la matrice version x modèle.")
     parser.add_argument("--category", choices=["control", "coherence", "normal"], default=None)
     parser.add_argument("--scenario", default=None, help="Filtre par sous-chaîne d'id de scénario.")
-    parser.add_argument("--version", choices=["A", "B", "both"], default="both")
+    parser.add_argument("--version", choices=["A", "B", "B2", "both"], default="both",
+                         help="'both' = A+B uniquement (rétrocompatible) ; B2 se sélectionne explicitement.")
     parser.add_argument("--models", nargs="+", default=None, help="Clés de modèles à tester (défaut: config).")
     parser.add_argument("--repeats", type=int, default=None, help="Override de protocol.n_repeats.")
+    parser.add_argument("--repeat-start", type=int, default=None,
+                         help="Indice de repeat de départ, par combinaison scénario/version/modèle. "
+                              "Par défaut, calculé automatiquement (prochain indice libre, voir "
+                              "logger.next_free_repeat) pour ne jamais collisionner avec des logs existants.")
     parser.add_argument("--no-judge", action="store_true", help="Ne pas appeler le juge (run moins cher/rapide).")
     args = parser.parse_args()
 
@@ -87,20 +97,23 @@ def main() -> int:
     for scenario in scenarios:
         for model_key in model_keys:
             for version in versions:
-                run_fn = run_scenario_version_a if version == "A" else run_scenario_version_b
+                run_fn = RUN_FNS[version]
+                start = (args.repeat_start if args.repeat_start is not None
+                         else next_free_repeat(scenario.id, version, model_key))
                 for rep in range(repeats):
+                    repeat = start + rep
                     done += 1
                     try:
-                        result = run_fn(config, scenario, model_key, repeat=rep)
+                        result = run_fn(config, scenario, model_key, repeat=repeat)
                         code_status = "n/a (juge)" if result.success is None else ("OK" if result.success else "ECHEC")
                         judge_status = ""
                         if not args.no_judge:
                             judge_status = f", juge={_run_judge(config, scenario, result)}"
                     except Exception as exc:
                         errors += 1
-                        print(f"[{done}/{n_runs}] ERREUR {scenario.id} v{version} {model_key} rep{rep}: {exc}")
+                        print(f"[{done}/{n_runs}] ERREUR {scenario.id} v{version} {model_key} rep{repeat}: {exc}")
                         continue
-                    print(f"[{done}/{n_runs}] {scenario.id} v{version} {model_key} rep{rep}: code={code_status}{judge_status}")
+                    print(f"[{done}/{n_runs}] {scenario.id} v{version} {model_key} rep{repeat}: code={code_status}{judge_status}")
 
     print(f"\nTerminé : {done} exécutions, {errors} erreur(s). Logs dans results/raw/")
     return 1 if errors else 0

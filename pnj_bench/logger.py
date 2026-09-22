@@ -23,6 +23,46 @@ from pathlib import Path
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results" / "raw"
 
 _git_commit_cache: str | None = None
+_results_dir_override: Path | None = None
+
+
+def set_results_dir(path: str | Path) -> None:
+    """Redirige tous les logs écrits APRÈS cet appel vers `path`, sans jamais toucher
+    RESULTS_DIR ni les logs déjà écrits. Pensé pour être appelé une fois en tout début
+    de script (ex: pointer vers results/v2/raw/ sans risquer d'écrire dans v1). Si
+    jamais appelé, le comportement par défaut (RESULTS_DIR) est strictement inchangé."""
+    global _results_dir_override
+    _results_dir_override = Path(path)
+
+
+def _results_dir() -> Path:
+    return _results_dir_override or RESULTS_DIR
+
+
+def existing_repeats(scenario_id: str, version: str, model_key: str) -> set[int]:
+    """Scan en lecture seule de scenario_runs_*.jsonl (dossier de résultats courant)
+    pour trouver les indices `repeat` déjà journalisés pour cette combinaison. Aucun
+    état en mémoire entre appels : robuste à une relance du process."""
+    seen: set[int] = set()
+    for path in sorted(_results_dir().glob("scenario_runs_*.jsonl")):
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                entry = json.loads(line)
+                if (entry.get("scenario_id") == scenario_id and entry.get("version") == version
+                        and entry.get("model_key") == model_key):
+                    seen.add(entry["repeat"])
+    return seen
+
+
+def next_free_repeat(scenario_id: str, version: str, model_key: str) -> int:
+    """Plus petit indice `repeat` >= 0 pas encore utilisé pour cette combinaison.
+    Empêche la collision qui a corrompu une donnée v1 (une relance manuelle isolée
+    avait réutilisé repeat=0 au lieu de repeat=2, faute de vérifier l'existant)."""
+    seen = existing_repeats(scenario_id, version, model_key)
+    n = 0
+    while n in seen:
+        n += 1
+    return n
 
 
 def git_commit_hash() -> str:
@@ -43,9 +83,10 @@ def git_commit_hash() -> str:
 
 
 def _append_jsonl(filename_prefix: str, entry: dict) -> None:
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    results_dir = _results_dir()
+    results_dir.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
-    path = RESULTS_DIR / f"{filename_prefix}_{date_str}.jsonl"
+    path = results_dir / f"{filename_prefix}_{date_str}.jsonl"
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
@@ -68,6 +109,8 @@ def log_call(
     retries: int = 0,
     tool_calls: list[dict] | None = None,
     validation_result: dict | None = None,
+    raw_content: str | None,
+    call_index: int | None = None,
 ) -> None:
     _append_jsonl("calls", {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -88,6 +131,8 @@ def log_call(
         "retries": retries,
         "tool_calls": tool_calls or [],
         "validation_result": validation_result,
+        "raw_content": raw_content,
+        "call_index": call_index,
     })
 
 
@@ -105,6 +150,7 @@ def log_scenario_run(
     n_turns: int,
     n_actions_executed: int,
     n_validation_rejected: int,
+    replies_shown: list[str | None],
 ) -> None:
     _append_jsonl("scenario_runs", {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -121,6 +167,7 @@ def log_scenario_run(
         "n_turns": n_turns,
         "n_actions_executed": n_actions_executed,
         "n_validation_rejected": n_validation_rejected,
+        "replies_shown": replies_shown,
     })
 
 
