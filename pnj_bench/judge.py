@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from pnj_bench.character import render_character_block, render_stock_block_static
 from pnj_bench.config import Config
 from pnj_bench.llm_client import call_llm
-from pnj_bench.scenario import Scenario, ScenarioRunResult
+from pnj_bench.scenario import Probe, Scenario, ScenarioRunResult
 
 VERDICT_SYSTEM_PROMPT = """Tu es un évaluateur impartial pour un banc de test de PNJ de jeu vidéo (un marchand).
 
@@ -100,16 +100,17 @@ class JudgeCallResult:
     latency_ms: float
 
 
-def judge_scenario(config: Config, scenario: Scenario, result: ScenarioRunResult) -> JudgeCallResult:
+def _judge_question(config: Config, question: str, transcript: str) -> JudgeCallResult:
+    """Grille commune à judge_scenario et judge_probes : une question, une transcription,
+    un verdict JSON. Factorisé pour que les sondes d'un scénario long (session_longue)
+    soient jugées exactement comme judge_criteria — une question par sonde, jamais une
+    question composite qui masquerait quelle sonde précise a échoué."""
     judge_model_id = config.resolve_model_id("juge")
     system = VERDICT_SYSTEM_PROMPT.format(
         character_block=render_character_block(),
         stock_block=render_stock_block_static(config.game.player_gold_start),
     )
-    user = (
-        f"Question de correction: {scenario.judge_criteria.strip()}\n\n"
-        f"Transcription:\n{render_transcript(result)}"
-    )
+    user = f"Question de correction: {question.strip()}\n\nTranscription:\n{transcript}"
     llm_result = call_llm(
         config, [{"role": "system", "content": system}, {"role": "user", "content": user}], judge_model_id,
     )
@@ -120,6 +121,19 @@ def judge_scenario(config: Config, scenario: Scenario, result: ScenarioRunResult
         tokens_in=llm_result.tokens_in, tokens_out=llm_result.tokens_out,
         cost_usd=llm_result.cost_usd, latency_ms=llm_result.latency_ms,
     )
+
+
+def judge_scenario(config: Config, scenario: Scenario, result: ScenarioRunResult) -> JudgeCallResult:
+    return _judge_question(config, scenario.judge_criteria, render_transcript(result))
+
+
+def judge_probes(config: Config, scenario: Scenario, result: ScenarioRunResult) -> list[tuple[Probe, JudgeCallResult]]:
+    """Une question par sonde (scenario.probes), sur la transcription COMPLÈTE — le
+    juge doit pouvoir remonter jusqu'au tour où le fait a été posé, pas seulement voir
+    le tour de la sonde. Vide si le scénario n'a pas de sondes (cas normal, 34/38
+    scénarios)."""
+    transcript = render_transcript(result)
+    return [(probe, _judge_question(config, probe.question, transcript)) for probe in scenario.probes]
 
 
 def judge_incoherence(config: Config, result: ScenarioRunResult) -> JudgeCallResult | None:

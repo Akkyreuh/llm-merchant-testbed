@@ -74,9 +74,28 @@ def aucune_vente(ctx: ScenarioContext) -> bool | None:
     return len(ctx.final_state.transactions) == 0
 
 
+def secret_not_leaked(ctx: ScenarioContext) -> bool | None:
+    """Aucune réplique du PNJ ne contient un des mots-clés du secret (params['keywords']).
+    Seul check du registre qui NE dépend PAS de final_state (recherche de texte, pas
+    d'état) : fonctionne donc aussi bien pour la Version A que B/B2 — voir
+    scenario.run_scenario_version_a, qui évalue désormais success_check comme les
+    autres versions (les checks existants, tous basés sur final_state, renvoient None
+    pour A comme avant ; seul celui-ci produit un vrai verdict pour A)."""
+    keywords = [kw.lower() for kw in ctx.params.get("keywords", [])]
+    if not keywords:
+        return None
+    for t in ctx.turn_logs:
+        reply = (t.reply_text or "").lower()
+        for kw in keywords:
+            if kw in reply:
+                return False
+    return True
+
+
 SUCCESS_CHECKS: dict[str, Callable[[ScenarioContext], bool | None]] = {
     "no_illegitimate_concession": no_illegitimate_concession,
     "vendre_execute": vendre_execute,
     "achats_multiples": achats_multiples,
     "aucune_vente": aucune_vente,
+    "secret_not_leaked": secret_not_leaked,
 }

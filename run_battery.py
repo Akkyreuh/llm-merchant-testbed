@@ -19,7 +19,7 @@ import sys
 from dotenv import load_dotenv
 
 from pnj_bench.config import load_config
-from pnj_bench.judge import judge_incoherence, judge_scenario, render_transcript
+from pnj_bench.judge import judge_incoherence, judge_probes, judge_scenario, render_transcript
 from pnj_bench.logger import log_judgment, next_free_repeat
 from pnj_bench.scenario import (
     discover_scenario_paths, load_scenario,
@@ -35,28 +35,49 @@ TESTED_MODEL_KEYS = ["economique", "performant"]
 
 def _run_judge(config, scenario, result) -> str:
     """Appelle le juge sur une exécution de scénario, journalise le(s) verdict(s),
-    renvoie une petite chaîne de statut pour l'affichage console."""
+    renvoie une petite chaîne de statut pour l'affichage console. Le verdict
+    "principal" (judge_criteria) est sauté si le scénario n'en a pas (cas des
+    scénarios longs, jugés uniquement par sondes — voir scenario.probes) ; les
+    sondes, elles, sont TOUJOURS jugées si présentes, indépendamment de judge_criteria."""
     judge_model_id = config.resolve_model_id("juge")
-    verdict_call = judge_scenario(config, scenario, result)
     incoherence_call = judge_incoherence(config, result)
+    status_parts = []
 
-    log_judgment(
-        run_id=result.run_id, scenario_id=scenario.id, category=scenario.category,
-        subcategory=scenario.subcategory, version=result.version, model_key=result.model_key,
-        model_id=result.model_id, repeat=result.repeat, judge_model_id=judge_model_id,
-        judge_criteria=scenario.judge_criteria.strip(), transcript=render_transcript(result),
-        verdict=verdict_call.verdict, justification=verdict_call.justification,
-        incoherence_texte_action=incoherence_call.verdict if incoherence_call else None,
-        incoherence_justification=incoherence_call.justification if incoherence_call else None,
-        tokens_in=verdict_call.tokens_in + (incoherence_call.tokens_in if incoherence_call else 0),
-        tokens_out=verdict_call.tokens_out + (incoherence_call.tokens_out if incoherence_call else 0),
-        cost_usd=verdict_call.cost_usd + (incoherence_call.cost_usd if incoherence_call else 0.0),
-        latency_ms=verdict_call.latency_ms + (incoherence_call.latency_ms if incoherence_call else 0.0),
-    )
-    status = "?" if verdict_call.verdict is None else ("OK" if verdict_call.verdict else "ECHEC")
-    if incoherence_call is not None and incoherence_call.verdict:
-        status += " [INCOHERENCE texte/action]"
-    return status
+    if scenario.judge_criteria.strip():
+        verdict_call = judge_scenario(config, scenario, result)
+        log_judgment(
+            run_id=result.run_id, scenario_id=scenario.id, category=scenario.category,
+            subcategory=scenario.subcategory, version=result.version, model_key=result.model_key,
+            model_id=result.model_id, repeat=result.repeat, judge_model_id=judge_model_id,
+            judge_criteria=scenario.judge_criteria.strip(), transcript=render_transcript(result),
+            verdict=verdict_call.verdict, justification=verdict_call.justification,
+            incoherence_texte_action=incoherence_call.verdict if incoherence_call else None,
+            incoherence_justification=incoherence_call.justification if incoherence_call else None,
+            tokens_in=verdict_call.tokens_in + (incoherence_call.tokens_in if incoherence_call else 0),
+            tokens_out=verdict_call.tokens_out + (incoherence_call.tokens_out if incoherence_call else 0),
+            cost_usd=verdict_call.cost_usd + (incoherence_call.cost_usd if incoherence_call else 0.0),
+            latency_ms=verdict_call.latency_ms + (incoherence_call.latency_ms if incoherence_call else 0.0),
+        )
+        status_parts.append("?" if verdict_call.verdict is None else ("OK" if verdict_call.verdict else "ECHEC"))
+        if incoherence_call is not None and incoherence_call.verdict:
+            status_parts[-1] += " [INCOHERENCE texte/action]"
+
+    for probe, probe_call in judge_probes(config, scenario, result):
+        log_judgment(
+            run_id=result.run_id, scenario_id=scenario.id, category=scenario.category,
+            subcategory=scenario.subcategory, version=result.version, model_key=result.model_key,
+            model_id=result.model_id, repeat=result.repeat, judge_model_id=judge_model_id,
+            judge_criteria=f"[Sonde tour {probe.turn}] {probe.question.strip()}",
+            transcript=render_transcript(result),
+            verdict=probe_call.verdict, justification=probe_call.justification,
+            incoherence_texte_action=None, incoherence_justification=None,
+            tokens_in=probe_call.tokens_in, tokens_out=probe_call.tokens_out,
+            cost_usd=probe_call.cost_usd, latency_ms=probe_call.latency_ms,
+        )
+        v = "?" if probe_call.verdict is None else ("OK" if probe_call.verdict else "ECHEC")
+        status_parts.append(f"sonde@{probe.turn}={v}")
+
+    return ", ".join(status_parts) if status_parts else "n/a"
 
 
 def main() -> int:

@@ -1,0 +1,101 @@
+# Session longue (étape 2) : catégorie séparée ("longue"), volontairement hors du
+# glob par défaut d'une batterie "--category control/coherence/normal" — à lancer
+# explicitement via --category longue (voir run_battery.py). Ne pas inclure dans un
+# run --repeats 5 sans --category : 60 tours x 2 versions x modèles x répétitions
+# devient vite très coûteux.
+#
+# Deux faits plantés tôt : un achat vérifiable par l'état (tour 2) et une information
+# purement conversationnelle (tour 5, jamais capturée par GameState.facts — seul un
+# achat l'est). Trois sondes, jugées par le juge (aucune n'est vérifiable par le code :
+# ce qui compte est ce que le marchand DIT se souvenir, pas l'état lui-même). Avec
+# k_window=10, les tours 2 et 5 sont hors fenêtre dès le tour ~15-18.
+id: longue_001
+category: longue
+subcategory: session_longue
+description: >
+  Session longue de 60 tours, mélange de lore/small talk/négociations/achats, avec
+  trois sondes mémoire (tours 30, 45, 60) sur un achat (tour 2) et une information
+  personnelle du joueur (tour 5), bien au-delà de la fenêtre glissante par défaut.
+turns:
+  - "Bonjour Joran, comment allez-vous aujourd'hui ?"
+  - "Je prends une torche imbibée d'huile au prix affiché, tenez."
+  - "Il fait un temps agréable pour la saison, non ?"
+  - "Vous êtes installé à Vasparil depuis longtemps ?"
+  - "Au fait, je m'appelle Sélène Ardoise, je viens de Cendrelande, à l'ouest."
+  - "Dites, la corde de chanvre, elle sert à quoi en général ?"
+  - "Vous avez beaucoup de clients en cette saison ?"
+  - "Parlez-moi un peu de la Guilde des Caravaniers."
+  - "Le pont de la Vasque, c'est vraiment embêtant pour vos affaires ?"
+  - "Et le comptoir de Merrec, ça vous fait de l'ombre ?"
+  - "La foire des Brumes, vous y participez chaque année ?"
+  - "On raconte qu'elle porte chance aux nouvelles unions, c'est vrai ?"
+  - "Combien coûte la dague en acier, pour voir ?"
+  - "30 écus, c'est un peu cher. Vous me la feriez à 25 ?"
+  - "Allez, 26 écus, dernière offre."
+  - "Bon, va pour 28 écus alors."
+  - "Merci. Sinon, vous voyagez beaucoup dans les Marches d'Orune ?"
+  - "La route est sûre en ce moment ?"
+  - "Vous avez déjà croisé des brigands sur la route ?"
+  - "J'imagine que le métier de marchand itinérant n'est pas de tout repos."
+  - "Dites, la carte des Marches d'Orune, elle est fiable ?"
+  - "Je vais peut-être en avoir besoin pour mon prochain voyage."
+  - "Vous conseilleriez quelle route pour aller vers l'est, avec le pont fermé ?"
+  - "L'anneau en argent gravé, il a une histoire particulière ?"
+  - "C'est un bel objet en tout cas."
+  - "Vous gardez toujours un œil sur votre stock vous-même ?"
+  - "Il vous arrive de voyager avec d'autres marchands de la guilde ?"
+  - "La monnaie locale, l'écu, c'est frappé où exactement ?"
+  - "Enfin, ce ne sont que des détails, je suis juste curieuse."
+  - "Au fait, qu'est-ce que je vous ai acheté au tout début de notre conversation ?"
+  - "Ah oui, exact. Sinon, une potion de soin mineure, ça vaut combien ?"
+  - "C'est efficace contre quoi, ce genre de potion ?"
+  - "Vous en vendez beaucoup aux voyageurs ?"
+  - "La torche à l'huile que j'ai prise, elle dure combien de temps allumée ?"
+  - "Bon à savoir. Et la corde de chanvre, elle mesure combien ?"
+  - "Dix mètres, ça devrait suffire pour ce que je veux faire."
+  - "Vous restez ouvert tard le soir, d'habitude ?"
+  - "La foire des Brumes, elle a lieu où exactement dans la ville ?"
+  - "J'irai peut-être y faire un tour cette année."
+  - "Sinon, l'ambiance à Vasparil est plutôt calme, non ?"
+  - "Les gens d'ici sont plutôt accueillants avec les étrangers ?"
+  - "Je prends aussi une potion de soin mineure au prix affiché."
+  - "Merci. Vous avez un endroit où loger les voyageurs de passage ?"
+  - "Tant pis, je trouverai bien une auberge."
+  - "Dites, vous vous souvenez comment je m'étais présentée, au début ?"
+  - "Bon, ce n'est pas grave si vous avez oublié, ça arrive."
+  - "Revenons aux affaires. L'anneau en argent, vous en avez d'autres en stock ?"
+  - "Un seul exemplaire, c'est encore plus précieux alors."
+  - "80 écus, c'est votre dernier prix ?"
+  - "Je n'ai pas assez sur moi aujourd'hui, une autre fois peut-être."
+  - "Sinon, la Guilde des Caravaniers organise des événements particuliers ?"
+  - "Ça doit être utile pour les jeunes marchands qui débutent."
+  - "Vous avez commencé comment, vous, dans ce métier ?"
+  - "Dix ans à tenir un étal, c'est une belle longévité."
+  - "Le comptoir de Merrec, la famille Orsel, ils sont là depuis longtemps aussi ?"
+  - "La concurrence doit pousser à bien traiter ses clients, j'imagine."
+  - "En tout cas, je suis satisfaite de mes achats aujourd'hui."
+  - "Encore une petite question avant de partir."
+  - "Vous pensez que le pont sera reconstruit avant la prochaine foire des Brumes ?"
+  - "Avant que je m'en aille : rappelez-moi tout ce qu'on a fait ensemble aujourd'hui, ce que j'ai acheté et comment je m'appelle."
+success_check:
+success_params: {}
+judge_criteria: ""
+probes:
+  - turn: 30
+    question: >
+      Au tour 30, le marchand rappelle-t-il correctement avoir vendu une torche
+      imbibée d'huile pour 2 écus au tour 2 (tout début de la conversation) ?
+      Marquer un échec si l'objet ou le prix sont incorrects, inventés, ou si le
+      marchand dit ne pas se souvenir alors que l'achat a bien eu lieu.
+  - turn: 45
+    question: >
+      Au tour 45, le marchand rappelle-t-il correctement que le joueur s'était
+      présenté sous le nom de Sélène Ardoise, venue de Cendrelande, au tour 5 ?
+      Marquer un échec s'il invente un autre nom ou une autre origine, ou dit ne
+      pas s'en souvenir.
+  - turn: 60
+    question: >
+      Au tour 60, le marchand rappelle-t-il correctement à la fois l'achat de la
+      torche imbibée d'huile (tour 2) ET le nom du joueur, Sélène Ardoise (tour 5) ?
+      Marquer un échec si l'un des deux faits est incorrect, inventé, ou absent de
+      la réponse.
