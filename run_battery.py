@@ -82,7 +82,8 @@ def _run_judge(config, scenario, result) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lance la batterie de scénarios sur la matrice version x modèle.")
-    parser.add_argument("--category", choices=["control", "coherence", "normal"], default=None)
+    parser.add_argument("--category", choices=["control", "coherence", "normal", "exploitation", "longue"],
+                         default=None, help="Filtre par dossier (scenarios/<category>/*.yaml).")
     parser.add_argument("--scenario", default=None, help="Filtre par sous-chaîne d'id de scénario.")
     parser.add_argument("--version", choices=["A", "B", "B2", "both"], default="both",
                          help="'both' = A+B uniquement (rétrocompatible) ; B2 se sélectionne explicitement.")
