@@ -155,12 +155,123 @@ def test_windowing_preserves_turn_pairs() -> None:
         )
 
 
+def test_tag_never_leaks_into_reply_text() -> None:
+    """Le tag "[Action exécutée : ...]"/"[Repli automatique : ...]" ne doit vivre
+    QUE dans agent.history (relu par le modèle) — jamais dans reply_text, qui est ce
+    qui est montré au joueur et transmis au juge (scenario.py construit TurnLog.reply_text
+    directement depuis result.reply_text, jamais depuis agent.history)."""
+    cases = [
+        # vente exécutée
+        FakeLLM([
+            LLMResult(content=None, tool_calls=[ToolCall("c1", "vendre", {"objet_id": "torche_huile", "prix": 2})]),
+            LLMResult(content="Tiens.", tool_calls=[]),
+        ]),
+        # refus authentique du modèle
+        FakeLLM([
+            LLMResult(content=None, tool_calls=[ToolCall("c1", "refuser", {"raison": "non merci"})]),
+            LLMResult(content="Non, désolé.", tool_calls=[]),
+        ]),
+    ]
+    for fake in cases:
+        agent = _make_agent(fake)
+        result = agent.play_turn("...")
+        assert result.reply_text is not None
+        assert "[Action" not in result.reply_text, result.reply_text
+        assert "[Repli" not in result.reply_text, result.reply_text
+        # agent.history, lui, DOIT porter le tag (vérifié aussi par test_history_contains_action_trace)
+        assert "[Action" in agent.history[-1]["content"] or "[Repli" in agent.history[-1]["content"]
+
+
+def test_call2_on_repli_automatique() -> None:
+    """L'appel 2 doit aussi avoir lieu quand toutes les tentatives de phase 1 sont
+    invalides et que le repli automatique se déclenche (max_retries épuisé)."""
+    config = load_config()
+    max_attempts = config.context.max_retries + 1  # défaut : 3
+    # Prix sous le plancher de potion_soin_mineure (8) à chaque tentative : toujours rejeté.
+    queue = [
+        LLMResult(content="Je vous la fais à ce prix.",
+                   tool_calls=[ToolCall(f"c{i}", "vendre", {"objet_id": "potion_soin_mineure", "prix": 1})])
+        for i in range(max_attempts)
+    ]
+    queue.append(LLMResult(content="Non, ce prix est impossible.", tool_calls=[]))  # appel 2
+    fake = FakeLLM(queue)
+    agent = _make_agent(fake, config)
+    result = agent.play_turn("Je vous en offre 1 écu.")
+
+    assert result.used_fallback is True
+    assert result.action_executed["action"] == "refuser"
+    assert result.call_indices == [1] * max_attempts + [2], result.call_indices
+    assert fake.calls[-1]["tools"] is None, "l'appel 2 ne doit jamais exposer les outils"
+    outcome_msg = fake.calls[-1]["messages"][-1]["content"]
+    assert "Repli automatique" in outcome_msg, outcome_msg
+    assert result.reply_text == "Non, ce prix est impossible.", result.reply_text
+
+
+def test_call2_on_empty_text_no_toolcall() -> None:
+    """L'appel 2 doit aussi avoir lieu quand l'appel 1 ne propose aucun outil ET
+    renvoie un texte vide — dans ce cas précis, l'appel 2 est un simple "parle
+    maintenant", pas un rapport d'action (il n'y a pas d'action à rapporter)."""
+    fake = FakeLLM([
+        LLMResult(content=None, tool_calls=[]),
+        LLMResult(content="Pardon, je réfléchissais.", tool_calls=[]),
+    ])
+    agent = _make_agent(fake)
+    result = agent.play_turn("Vous m'écoutez ?")
+
+    assert result.action_executed is None
+    assert result.call_indices == [1, 2], result.call_indices
+    assert fake.calls[-1]["tools"] is None
+    phase2_msg = fake.calls[-1]["messages"][-1]["content"]
+    assert "Résultat réel" not in phase2_msg, "pas d'action à rapporter : ne pas prétendre un résultat"
+    assert result.reply_text == "Pardon, je réfléchissais.", result.reply_text
+
+
+def test_call2_messages_never_contain_tool_artifacts() -> None:
+    """Forme exacte des messages de l'appel 2 (compatibilité multi-fournisseurs) :
+    jamais de message role="tool", jamais de message assistant portant "tool_calls".
+    Les messages de repli (retry_messages, qui EUX contiennent ces artefacts) sont
+    strictement internes à la boucle de phase 1 et ne sont jamais concaténés aux
+    messages de l'appel 2 (voir agent_structured_v2.py: messages2 = base_messages +
+    [...], jamais base_messages + retry_messages + [...])."""
+    scenarios = [
+        # action exécutée directement
+        FakeLLM([
+            LLMResult(content=None, tool_calls=[ToolCall("c1", "vendre", {"objet_id": "torche_huile", "prix": 2})]),
+            LLMResult(content="Tiens.", tool_calls=[]),
+        ]),
+        # repli automatique après plusieurs tentatives invalides
+        FakeLLM(
+            [
+                LLMResult(content="...", tool_calls=[ToolCall(f"c{i}", "vendre", {"objet_id": "potion_soin_mineure", "prix": 1})])
+                for i in range(load_config().context.max_retries + 1)
+            ]
+            + [LLMResult(content="Non.", tool_calls=[])]
+        ),
+        # appel 1 vide sans outil
+        FakeLLM([
+            LLMResult(content=None, tool_calls=[]),
+            LLMResult(content="Voilà.", tool_calls=[]),
+        ]),
+    ]
+    for fake in scenarios:
+        agent = _make_agent(fake)
+        agent.play_turn("...")
+        call2_messages = fake.calls[-1]["messages"]
+        for m in call2_messages:
+            assert m.get("role") != "tool", f"message role=tool trouvé dans l'appel 2 : {m}"
+            assert "tool_calls" not in m, f"message avec tool_calls trouvé dans l'appel 2 : {m}"
+
+
 TESTS = [
     test_two_calls_when_action_proposed,
     test_one_call_when_pure_dialogue,
     test_final_reply_never_empty,
     test_history_contains_action_trace,
     test_windowing_preserves_turn_pairs,
+    test_tag_never_leaks_into_reply_text,
+    test_call2_on_repli_automatique,
+    test_call2_on_empty_text_no_toolcall,
+    test_call2_messages_never_contain_tool_artifacts,
 ]
 
 
