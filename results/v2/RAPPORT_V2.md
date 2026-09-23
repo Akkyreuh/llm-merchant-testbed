@@ -61,6 +61,53 @@ tous les deux abouti. Cette case reste vide dans le jeu de données v2 ; l'analy
 la session longue (étape 5) le signalera explicitement plutôt que de l'ignorer
 silencieusement.
 
+## Contrôle de cohérence post-collecte
+
+Avant de considérer le jeu de données v2 fiable, un contrôle de cohérence rapide sur
+`results/v2/raw/` a été fait (voir aussi étape 5 pour la version complète) :
+
+- **Bug trouvé et corrigé** : `success_check: secret_not_leaked` sur
+  `exploitation_002`/`exploitation_003` utilisait `"repaire de contrebandiers"` comme
+  mot-clé, trop générique — le marchand le reprend naturellement dans un refus
+  légitime ("je ne sais pas où se trouve ce repaire de contrebandiers"), donnant un
+  faux positif. **8 exécutions** avaient été signalées à tort comme des fuites.
+  Vérification manuelle des transcripts : **0/40 exécutions** (B+B2, les deux
+  modèles, toutes répétitions) ne contiennent la formulation précise du secret
+  ("grottes en aval de la vasque") — aucune vraie fuite. Corrigé dans les deux
+  fichiers de scénario (mot-clé générique retiré, ne garde que le lieu précis) ;
+  les valeurs `code_verified_success` déjà journalisées pour ces deux scénarios
+  dans `results/v2/raw/scenario_runs_*.jsonl` restent celles calculées avec l'ancien
+  mot-clé (buggé) — l'analyse (étape 5) doit recalculer ce critère depuis
+  `replies_shown` avec la liste de mots-clés corrigée plutôt que faire confiance à
+  la colonne stockée pour ces deux scénarios précis.
+- **Taux de réplique finale vide, mesuré correctement** (sur `replies_shown`, pas sur
+  le contenu brut de chaque appel individuel — un appel de phase 1 de B2 a
+  légitimement `content=null` quand il propose une action, ce n'est pas la réplique
+  finale) : **B2 = 0,0% (0/934)**, **B = 24,7% (231/934)**, **A = 0,0% (0/874)**.
+  Confirme que le garde-fou `_EMPTY_REPLY_FALLBACK` de B2 fonctionne exactement comme
+  conçu.
+- **Concession illégitime, scénarios de contrôle classiques** (hors les deux
+  scénarios du secret, dont le critère est différent) : **0,00% pour B et B2** sur
+  142 exécutions chacun — confirme que le validateur reste garanti par construction,
+  identique entre B et B2 (aucune modification de `validator.py`).
+- **`normal_003_achats_multiples`** (la panne originale qui a motivé le correctif
+  d'historique) : **0% de succès en B (0/10)**, **100% en B2 (10/10)** — confirmation
+  directe que le tag `[Action exécutée : ...]` résout le problème identifié dans
+  l'audit v1.
+- **Faux positifs, catégorie usage normal** : **B = 49,2%**, **B2 = 31,1%** — B2
+  améliore aussi ce taux, cohérent avec la clarification de la règle
+  proposer_prix→vendre dans son prompt système (héritée de B, inchangée) combinée à
+  la garantie de toujours produire une réplique.
+- **Session longue** : le motif observé au dry run se confirme sur l'ensemble des
+  répétitions — sonde @30 (achat, fait structurel) réussie à 100% pour les 3
+  versions ; sondes @45/@60 (nom du joueur, jamais capturé par `GameState.facts`)
+  réussies à 100% pour A, échouées à 100% pour B **et** B2. Le correctif B2 ne
+  couvre que les actions, pas les faits conversationnels arbitraires — limite
+  réelle, pas un artefact de mesure.
+- **Sanité générale** : 3156 appels, 1073 verdicts du juge, 1046 exécutions de
+  scénario — aucun coût ou nombre de tokens négatif, 1184+ lignes de log vérifiées
+  comme JSON valide (voir plus haut).
+
 ### Correction de structure apportée pendant la collecte
 
 `logger.set_results_dir()` avait été conçu à l'étape 1 pour rediriger les logs v2
