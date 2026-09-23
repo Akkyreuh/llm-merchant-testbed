@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 from pnj_bench.config import load_config
 from pnj_bench.judge import judge_incoherence, judge_probes, judge_scenario, render_transcript
-from pnj_bench.logger import log_judgment, next_free_repeat
+from pnj_bench.logger import log_judgment, next_free_repeat, set_results_dir
 from pnj_bench.scenario import (
     discover_scenario_paths, load_scenario,
     run_scenario_version_a, run_scenario_version_b, run_scenario_version_b2,
@@ -94,9 +94,14 @@ def main() -> int:
                               "Par défaut, calculé automatiquement (prochain indice libre, voir "
                               "logger.next_free_repeat) pour ne jamais collisionner avec des logs existants.")
     parser.add_argument("--no-judge", action="store_true", help="Ne pas appeler le juge (run moins cher/rapide).")
+    parser.add_argument("--results-dir", default=None,
+                         help="Dossier de sortie des logs (défaut : results/raw/). Utiliser results/v2/raw/ "
+                              "pour toute collecte v2, afin de ne jamais mélanger avec les données v1.")
     args = parser.parse_args()
 
     load_dotenv()
+    if args.results_dir:
+        set_results_dir(args.results_dir)
     config = load_config()
     model_keys = args.models or TESTED_MODEL_KEYS
     repeats = args.repeats if args.repeats is not None else config.protocol.n_repeats

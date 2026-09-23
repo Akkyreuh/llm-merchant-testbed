@@ -15,6 +15,7 @@ import sys
 from dotenv import load_dotenv
 
 from pnj_bench.config import load_config
+from pnj_bench.logger import set_results_dir
 from pnj_bench.scenario import load_scenario, run_scenario_version_a, run_scenario_version_b, run_scenario_version_b2
 
 
@@ -37,9 +38,12 @@ def main() -> int:
     parser.add_argument("--version", choices=["A", "B", "B2", "both"], default="both",
                          help="'both' = A+B uniquement (rétrocompatible) ; B2 se sélectionne explicitement.")
     parser.add_argument("--model", default="economique", help="Clé de modèle (config.yaml: models) ou id direct.")
+    parser.add_argument("--results-dir", default=None, help="Dossier de sortie des logs (défaut : results/raw/).")
     args = parser.parse_args()
 
     load_dotenv()
+    if args.results_dir:
+        set_results_dir(args.results_dir)
     config = load_config()
     scenario = load_scenario(args.scenario)
 
